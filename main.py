@@ -3,7 +3,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 # Waveform parameters
-N_SAMPLES = 100
+N_PER_CLASS = 500
 WAVEFORM_LENGTH = 200
 SAMPLE_RATE = 100  # Hz 
 NOISE_STD_RANGE = (0.06, 0.20)  # each waveform will have a different noise level sampled from this range
@@ -199,22 +199,19 @@ FEATURE_NAMES = [
 ]
 
 def generate_dataset(
-    n_samples: int = N_SAMPLES,
+    n_per_class: int = N_PER_CLASS,
     include_raw: bool = True,
     rng: np.random.Generator | None = None,
 ) -> tuple[NDArray[np.float64], NDArray[np.int64]]:
     rng = rng or np.random.default_rng()
-
-    # Round up so both classes always have the same number of samples.
-    n_per_class = (n_samples + 1) // 2
-    actual_n_samples = n_per_class * 2
+    n_samples = n_per_class * 2
 
     pairs: list[tuple[NDArray[np.float64], int]] = []
     for generator, label in ((generate_volcanic_tremor, 0), (generate_fault_slip, 1)):
         for _ in range(n_per_class):
             pairs.append((generator(rng=rng), label))
 
-    indices = rng.permutation(actual_n_samples)
+    indices = rng.permutation(n_samples)
     pairs = [pairs[i] for i in indices]
     waveforms = [p[0] for p in pairs]
     labels = [p[1] for p in pairs]
