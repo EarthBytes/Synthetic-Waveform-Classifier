@@ -1,3 +1,7 @@
+# Train/test split
+TEST_SIZE = 0.2
+RANDOM_STATE = 42
+
 # Waveform parameters
 N_PER_CLASS = 500
 WAVEFORM_LENGTH = 200
