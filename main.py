@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 N_SAMPLES = 100
 WAVEFORM_LENGTH = 200
 SAMPLE_RATE = 100  # Hz 
-NOISE_STD = 0.12
+NOISE_STD_RANGE = (0.06, 0.20)  # each waveform will have a different noise level sampled from this range
 
 CLASS_LABELS = {0: "volcanic_tremor", 1: "fault_slip"}
 
@@ -28,9 +28,12 @@ def _ricker(t: NDArray[np.float64], frequency: float) -> NDArray[np.float64]:
     p = (np.pi * frequency * t) ** 2
     return (1.0 - 2.0 * p) * np.exp(-p)
 
+def _sample_noise_std(rng: np.random.Generator) -> float:
+    return float(rng.uniform(*NOISE_STD_RANGE))
+
 def _add_noise(
     signal: NDArray[np.float64],
-    noise_std: float = NOISE_STD,
+    noise_std: float,
     rng: np.random.Generator | None = None,
 ) -> NDArray[np.float64]:
     rng = rng or np.random.default_rng()
@@ -39,10 +42,12 @@ def _add_noise(
 def generate_volcanic_tremor(
     length: int = WAVEFORM_LENGTH,
     sample_rate: float = SAMPLE_RATE,
-    noise_std: float = NOISE_STD,
+    noise_std: float | None = None,
     rng: np.random.Generator | None = None,
 ) -> NDArray[np.float64]:
     rng = rng or np.random.default_rng()
+    if noise_std is None:
+        noise_std = _sample_noise_std(rng)
     t = _time_axis(length, sample_rate)
     signal = np.zeros(length)
 
@@ -66,10 +71,12 @@ def generate_volcanic_tremor(
 def generate_fault_slip(
     length: int = WAVEFORM_LENGTH,
     sample_rate: float = SAMPLE_RATE,
-    noise_std: float = NOISE_STD,
+    noise_std: float | None = None,
     rng: np.random.Generator | None = None,
 ) -> NDArray[np.float64]:
     rng = rng or np.random.default_rng()
+    if noise_std is None:
+        noise_std = _sample_noise_std(rng)
     t = _time_axis(length, sample_rate)
     duration = length / sample_rate
     signal = np.zeros(length)
@@ -104,8 +111,9 @@ def _dominant_frequency(
     magnitudes: NDArray[np.float64],
     freqs: NDArray[np.float64],
 ) -> float:
-    positive = magnitudes[1 : len(magnitudes) // 2]
-    positive_freqs = freqs[1 : len(freqs) // 2]
+    # return the frequency bin with the highest magnitude.
+    positive = magnitudes[1:]
+    positive_freqs = freqs[1:]
     if positive.sum() == 0:
         return 0.0
     return float(positive_freqs[np.argmax(positive)])
@@ -115,8 +123,9 @@ def _spectral_spread(
     freqs: NDArray[np.float64],
     centroid: float,
 ) -> float:
-    positive = magnitudes[1 : len(magnitudes) // 2]
-    positive_freqs = freqs[1 : len(freqs) // 2]
+    # return the weighted standard deviation of the spectrum around centroids
+    positive = magnitudes[1:]
+    positive_freqs = freqs[1:]
     total = positive.sum()
     if total == 0:
         return 0.0
@@ -154,10 +163,13 @@ def extract_features(
     )
 
     std = waveform.std()
-    if std < 1e-12:
-        kurtosis = 0.0
-    else:
-        kurtosis = float(np.mean(((waveform - waveform.mean()) / std) ** 4) - 3.0)
+    # Excess kurtosis
+    # 0 for a Gaussian distribution.
+    excess_kurtosis = (
+        0.0
+        if std < 1e-12
+        else float(np.mean(((waveform - waveform.mean()) / std) ** 4) - 3.0)
+    )
 
     max_energy, mean_energy, peak_ratio = _short_time_energy_features(waveform, sample_rate)
 
@@ -167,7 +179,7 @@ def extract_features(
             centroid,
             bandwidth,
             spectral_entropy,
-            kurtosis,
+            excess_kurtosis,
             max_energy,
             mean_energy,
             peak_ratio,
@@ -180,7 +192,7 @@ FEATURE_NAMES = [
     "spectral_centroid",
     "spectral_bandwidth",
     "spectral_entropy",
-    "kurtosis",
+    "excess_kurtosis",
     "max_short_time_energy",
     "mean_short_time_energy",
     "energy_peak_ratio",
@@ -192,14 +204,17 @@ def generate_dataset(
     rng: np.random.Generator | None = None,
 ) -> tuple[NDArray[np.float64], NDArray[np.int64]]:
     rng = rng or np.random.default_rng()
-    
-    n_per_class = n_samples // 2
+
+    # Round up so both classes always have the same number of samples.
+    n_per_class = (n_samples + 1) // 2
+    actual_n_samples = n_per_class * 2
+
     pairs: list[tuple[NDArray[np.float64], int]] = []
     for generator, label in ((generate_volcanic_tremor, 0), (generate_fault_slip, 1)):
         for _ in range(n_per_class):
             pairs.append((generator(rng=rng), label))
 
-    indices = rng.permutation(n_samples)
+    indices = rng.permutation(actual_n_samples)
     pairs = [pairs[i] for i in indices]
     waveforms = [p[0] for p in pairs]
     labels = [p[1] for p in pairs]
@@ -218,11 +233,13 @@ def main() -> None:
     X, y = generate_dataset(rng=rng)
 
     n_engineered = len(FEATURE_NAMES)
-    n_raw = WAVEFORM_LENGTH if X.shape[1] > n_engineered else 0
+    n_raw = X.shape[1] - n_engineered
 
     print(f"Generated {len(y)} seismic waveforms")
     print(f"  X shape: {X.shape}")
     print(f"  y shape: {y.shape}")
+    print(f"  Raw samples: {n_raw} columns")
+    print(f"  Engineered: {n_engineered} features")
     print(f"  Class 0 ({CLASS_LABELS[0]}): {(y == 0).sum()} samples")
     print(f"  Class 1 ({CLASS_LABELS[1]}): {(y == 1).sum()} samples")
     print(f"  Value range: [{X.min():.3f}, {X.max():.3f}]")
