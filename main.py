@@ -1,7 +1,9 @@
 from __future__ import annotations
 import numpy as np
+from sklearn.metrics import classification_report, confusion_matrix
 
-from config import CLASS_LABELS, FEATURE_NAMES, TEST_SIZE
+from config import CLASS_LABELS, FEATURE_NAMES, TEST_SIZE, RANDOM_STATE
+from models import create_logistic_regression, evaluate_classifier
 from preprocessing import split_dataset
 from generator import generate_dataset
 
@@ -10,7 +12,7 @@ def _print_class_counts(y: np.ndarray, indent: str = "  ") -> None:
         print(f"{indent}Class {label_id} ({name}): {(y == label_id).sum()} samples")
 
 def main() -> None:
-    rng = np.random.default_rng(42)
+    rng = np.random.default_rng(RANDOM_STATE)
     X, y = generate_dataset(rng=rng)
 
     n_engineered = len(FEATURE_NAMES)
@@ -34,6 +36,17 @@ def main() -> None:
     _print_class_counts(y_train, indent="    ")
     print(f"  Testing:    {len(y_test)} samples  X shape {X_test.shape}")
     _print_class_counts(y_test, indent="    ")
+
+    print()
+    print("Training logistic regression")
+    model = create_logistic_regression()
+    model.fit(X_train, y_train)
+    accuracy, y_pred = evaluate_classifier(model, X_test, y_test)
+    print("  Predictions sample:", y_pred[:10])
+    print(f"  Test accuracy: {accuracy:.1%}")
+
+    print(confusion_matrix(y_test, y_pred))
+    print(classification_report(y_test, y_pred, target_names=CLASS_LABELS.values()))
 
 if __name__ == "__main__":
     main()
