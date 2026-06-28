@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix
 
 from config import CLASS_LABELS, FEATURE_NAMES, TEST_SIZE, RANDOM_STATE
-from models import create_logistic_regression, evaluate_classifier, create_knn
+from models import MODELS, evaluate_classifier
 from generator import generate_dataset
 from preprocessing import split_dataset
 from sklearn.base import ClassifierMixin
@@ -55,22 +55,15 @@ def main() -> None:
     print(f"  Testing:    {len(y_test)} samples  X shape {X_test.shape}")
     _print_class_counts(y_test, indent="    ")
 
-    _train_and_evaluate(
-        "logistic regression",
-        create_logistic_regression(),
-        X_train,
-        y_train,
-        X_test,
-        y_test,
-    )
-    _train_and_evaluate(
-        "KNN",
-        create_knn(),
-        X_train,
-        y_train,
-        X_test,
-        y_test,
-    )
+    for name, create_model in MODELS:
+        _train_and_evaluate(
+            name,
+            create_model(),
+            X_train,
+            y_train,
+            X_test,
+            y_test,
+        )
 
 if __name__ == "__main__":
     main()
