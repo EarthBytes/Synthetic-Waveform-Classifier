@@ -26,6 +26,9 @@ FAULT_BURST_WIDTH = 0.04
 # KNN
 KNN_N_NEIGHBORS = 5
 
+# Random Forest
+RF_N_ESTIMATORS = 100
+
 FEATURE_NAMES = [
     "dominant_frequency",
     "spectral_centroid",
