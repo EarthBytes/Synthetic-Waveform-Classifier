@@ -33,6 +33,12 @@ RF_N_ESTIMATORS = 100
 MLP_HIDDEN_LAYER_SIZES = (128, 64)
 MLP_MAX_ITER = 500
 
+# Visualisation
+N_VISUALISATION_EXAMPLES = 6
+VISUALISATION_MAX_ERRORS = 2
+VISUALISATION_OUTPUT_DIR = "outputs"
+COMPARISON_OUTPUT = "outputs/model_comparison.png"
+
 FEATURE_NAMES = [
     "dominant_frequency",
     "spectral_centroid",
