@@ -29,6 +29,10 @@ KNN_N_NEIGHBORS = 5
 # Random Forest
 RF_N_ESTIMATORS = 100
 
+# MLP
+MLP_HIDDEN_LAYER_SIZES = (128, 64)
+MLP_MAX_ITER = 500
+
 FEATURE_NAMES = [
     "dominant_frequency",
     "spectral_centroid",
