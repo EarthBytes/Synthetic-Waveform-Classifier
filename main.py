@@ -3,13 +3,31 @@ import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix
 
 from config import CLASS_LABELS, FEATURE_NAMES, TEST_SIZE, RANDOM_STATE
-from models import create_logistic_regression, evaluate_classifier
-from preprocessing import split_dataset
+from models import create_logistic_regression, evaluate_classifier, create_knn
 from generator import generate_dataset
+from preprocessing import split_dataset
+from sklearn.base import ClassifierMixin
 
 def _print_class_counts(y: np.ndarray, indent: str = "  ") -> None:
     for label_id, name in CLASS_LABELS.items():
         print(f"{indent}Class {label_id} ({name}): {(y == label_id).sum()} samples")
+
+def _train_and_evaluate(
+    name: str,
+    model: ClassifierMixin,
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_test: np.ndarray,
+    y_test: np.ndarray,
+) -> None:
+    print()
+    print(f"Training {name}")
+    model.fit(X_train, y_train)
+    accuracy, y_pred = evaluate_classifier(model, X_test, y_test)
+    print("  Predictions sample:", y_pred[:10])
+    print(f"  Test accuracy: {accuracy:.1%}")
+    print(confusion_matrix(y_test, y_pred))
+    print(classification_report(y_test, y_pred, target_names=CLASS_LABELS.values()))
 
 def main() -> None:
     rng = np.random.default_rng(RANDOM_STATE)
@@ -37,16 +55,22 @@ def main() -> None:
     print(f"  Testing:    {len(y_test)} samples  X shape {X_test.shape}")
     _print_class_counts(y_test, indent="    ")
 
-    print()
-    print("Training logistic regression")
-    model = create_logistic_regression()
-    model.fit(X_train, y_train)
-    accuracy, y_pred = evaluate_classifier(model, X_test, y_test)
-    print("  Predictions sample:", y_pred[:10])
-    print(f"  Test accuracy: {accuracy:.1%}")
-
-    print(confusion_matrix(y_test, y_pred))
-    print(classification_report(y_test, y_pred, target_names=CLASS_LABELS.values()))
+    _train_and_evaluate(
+        "logistic regression",
+        create_logistic_regression(),
+        X_train,
+        y_train,
+        X_test,
+        y_test,
+    )
+    _train_and_evaluate(
+        "KNN",
+        create_knn(),
+        X_train,
+        y_train,
+        X_test,
+        y_test,
+    )
 
 if __name__ == "__main__":
     main()

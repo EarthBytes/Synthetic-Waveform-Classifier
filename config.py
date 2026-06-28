@@ -23,6 +23,9 @@ FAULT_N_BURSTS = (2, 5)
 FAULT_BURST_FREQ_RANGE = (2.0, 25.0)
 FAULT_BURST_WIDTH = 0.04
 
+# KNN
+KNN_N_NEIGHBORS = 5
+
 FEATURE_NAMES = [
     "dominant_frequency",
     "spectral_centroid",
